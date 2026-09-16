@@ -478,6 +478,60 @@
         line-height: 1.5;
       }
 
+      .notice-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.72);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+        z-index: 90;
+      }
+      .notice-overlay.open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .notice {
+        width: min(460px, 100%);
+        background: var(--charcoal);
+        border: 1px solid var(--line-strong);
+        padding: 30px;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+      }
+      .notice-kicker {
+        color: var(--ember);
+        font-size: 11px;
+        letter-spacing: 2px;
+        margin-bottom: 12px;
+      }
+      .notice h3 {
+        font-size: 24px;
+        line-height: 1.1;
+        margin-bottom: 12px;
+      }
+      .notice p {
+        color: rgba(244, 241, 234, 0.68);
+        font-size: 14px;
+        line-height: 1.6;
+        margin-bottom: 24px;
+      }
+      .notice-close {
+        width: 100%;
+        background: var(--bone);
+        color: var(--ink);
+        padding: 13px 16px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 1px;
+      }
+      .notice-close:hover {
+        background: var(--ember);
+      }
+
       /* ---------- quick view modal ---------- */
       .qv-overlay {
         position: fixed;
@@ -761,6 +815,20 @@
       <div class="qv" id="qvBox"></div>
     </div>
 
+    <div class="notice-overlay" id="noticeOverlay">
+      <div
+        class="notice"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="noticeTitle"
+      >
+        <div class="notice-kicker">ASTRX CHECKOUT</div>
+        <h3 class="display" id="noticeTitle">One last step.</h3>
+        <p id="noticeMessage"></p>
+        <button class="notice-close" id="noticeCloseBtn">CONTINUE</button>
+      </div>
+    </div>
+
     <script>
       const PRODUCTS = [
         {
@@ -1014,6 +1082,16 @@
         document.getElementById("drawer").classList.remove("open");
         document.getElementById("overlay").classList.remove("open");
       }
+      function showNotice(message, title = "One last step.") {
+        document.getElementById("noticeTitle").textContent = title;
+        document.getElementById("noticeMessage").textContent = message;
+        document.getElementById("noticeCloseBtn").textContent = "CONTINUE";
+        document.getElementById("noticeCloseBtn").onclick = closeNotice;
+        document.getElementById("noticeOverlay").classList.add("open");
+      }
+      function closeNotice() {
+        document.getElementById("noticeOverlay").classList.remove("open");
+      }
       document.getElementById("cartOpenBtn").addEventListener("click", () => {
         renderCart();
         openDrawer();
@@ -1025,6 +1103,14 @@
         closeDrawer();
         closeQuickView();
       });
+      document
+        .getElementById("noticeCloseBtn")
+        .addEventListener("click", closeNotice);
+      document
+        .getElementById("noticeOverlay")
+        .addEventListener("click", (event) => {
+          if (event.target.id === "noticeOverlay") closeNotice();
+        });
 
       document
         .getElementById("checkoutBtn")
@@ -1050,14 +1136,18 @@
             !customerEmail ||
             !deliveryAddress
           ) {
-            alert(
+            showNotice(
               "Enter your name, phone number, email, and delivery address.",
+              "Complete your details.",
             );
             return;
           }
           if (!customerEmail.includes("@")) {
             document.getElementById("customerEmail").focus();
-            alert("Enter a valid email before checkout.");
+            showNotice(
+              "Enter a valid email address before checkout.",
+              "Check your email.",
+            );
             return;
           }
 
@@ -1088,13 +1178,20 @@
             if (!response.ok) {
               throw new Error("The order could not be emailed.");
             }
-            alert(
-              "Your order details were sent. Enter the same total on the Paystack payment page.",
+            showNotice(
+              "Your order details were sent. Continue to Paystack and enter the same total shown in your cart.",
+              "Order details received.",
             );
-            window.location.href = PAYSTACK_PAYMENT_PAGE;
+            document.getElementById("noticeCloseBtn").textContent =
+              "OPEN PAYSTACK";
+            document.getElementById("noticeCloseBtn").onclick = () => {
+              closeNotice();
+              window.location.href = PAYSTACK_PAYMENT_PAGE;
+            };
           } catch (error) {
-            alert(
+            showNotice(
               error.message || "Payment could not start. Please try again.",
+              "Checkout could not continue.",
             );
           } finally {
             checkoutBtn.disabled = false;
